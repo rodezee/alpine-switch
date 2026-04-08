@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <script src="/alpine-switch.js"></script>
+    <script src="//unpkg.com/alpinejs" defer></script>
+    <link rel="stylesheet" href="//unpkg.com/@picocss/pico">
+</head>
+<body class="container">
+
+    <nav>
+        <ul>
+            <li><a x-link href="/">Home</a></li>
+            <li><a x-link href="/user/john">John</a></li>
+            <li><a x-link href="/user/jane">Jane</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <template x-route="/">
+            <section>
+                <h1>Welcome Home</h1>
+            </section>
+        </template>
+
+        <template x-route="/user/:name">
+            <section>
+                <h1>Profile of: <span x-text="name"></span></h1>
+                <p>Hello, <span x-text="name"></span>! This is clean.</p>
+            </section>
+        </template>
+
+        </main>
+
+</body>
+</html>
