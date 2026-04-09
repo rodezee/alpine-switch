@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { waitFor } from '@testing-library/dom';
 import Alpine from 'alpinejs';
 import './alpine-switch.js'; 
@@ -122,16 +122,19 @@ describe('Alpine Switch Router', () => {
 
   it('ignores external links and allows default browser behavior', async () => {
     const router = Alpine.store('router');
-    vi.spyOn(router, 'go'); // Watch the 'go' method
+    const spy = vi.spyOn(router, 'go'); 
 
     const externalLink = document.createElement('a');
     externalLink.href = 'https://google.com';
-    document.body.appendChild(externalLink);
+    externalLink.innerText = 'External Link';
+    document.body.appendChild(externalLink); // Must be in the body to bubble!
 
-    // We have to simulate a real click event
-    externalLink.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    externalLink.click();
 
-    // Router.go should NOT have been called
-    expect(router.go).not.toHaveBeenCalled();
+    // Check that router.go was never touched
+    expect(spy).not.toHaveBeenCalled();
+    
+    // Clean up
+    externalLink.remove();
   });
 });

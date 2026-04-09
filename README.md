@@ -26,11 +26,11 @@ A lightweight, declarative client-side router for **Alpine.js**. Inspired by the
 
 ### 1. Installation
 
-Include the script after Alpine.js in your project:
+Include the script before Alpine.js in your project:
 
 ```html
+<script defer src="//cdn.jsdelivr.net/gh/rodezee/alpine-switch/alpine-switch.js"></script>
 <script defer src="//unpkg.com/alpinejs"></script>
-<script defer src="//esm.sh/gh/rodezee/alpine-switch"></script>
 
 ```
 
