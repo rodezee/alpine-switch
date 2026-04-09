@@ -10,10 +10,7 @@
 <body class="container" x-data="{}">
 
     <header>
-        <h1 x-data="{ show: true }" 
-            x-show="show" x-effect="if($store.router.title) show = false; setTimeout(() => { show = true }, 500);"
-            x-text="$store.router.title"
-            x-transition.enter.duration.500ms></h1>
+        <h1 x-text="$store.router.title"></h1>
         <nav>
             <ul>
                 <li><a href="/">Home</a></li>

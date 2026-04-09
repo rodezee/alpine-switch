@@ -1,130 +1,119 @@
 
-# ➤ Template Switch
+# 🚦 Alpine Switch Router
 
-A tiny, zero-dependency, **Stateful SPA Router** for the modern web. Built for **instantaneous transitions** and **persistent state** by treating every unique URL as a living DOM instance.
+A lightweight, declarative client-side router for **Alpine.js**. Inspired by the simplicity of "Switch" logic, this router ensures that only one route is active at a time, automatically cleaning up old components to prevent memory leaks and DOM clutter.
+
+## ✨ Features
+
+-   **Declarative Routing:** Define routes directly in your HTML using `<template>` tags.
+    
+-   **Parameterized Paths:** Easily handle dynamic routes like `/user/:id` or `/post/:slug`.
+    
+-   **Automatic Title Management:** Update the browser tab title automatically as you navigate.
+    
+-   **Memory Efficient:** Previous routes are completely unmounted and cleaned up by Alpine.js.
+    
+-   **Zero Dependencies:** Just you and Alpine.js.
+    
+-   **Built-in 404 Handling:** Fallback to a custom 404 section when no routes match.
+
+-   **AlpineJS Transitions:** AlpineJS transitions play with the route switches.
+    
 
 ----------
 
 ## 🚀 Quick Start
 
-The fastest way to use **Template Switch** is via the [esm.sh](https://esm.sh) CDN.
+### 1. Installation
+
+Include the script after Alpine.js in your project:
 
 ```html
-<script type="module" src="https://esm.sh/gh/rodezee/template-switch"></script>
+<script defer src="//unpkg.com/alpinejs"></script>
+<script defer src="//esm.sh/gh/rodezee/alpine-switch"></script>
 
 ```
 
-----------
+### 2. Basic Setup
 
-## ✨ Key Features
-
--   **Zero Latency:** Routes are rendered into the DOM once and toggled via `display: block`. Switching is as fast as a CSS change.
-    
--   **State Persistence:** Because DOM nodes aren't destroyed when you navigate away, scroll positions, form inputs, and JS variables stay exactly where you left them.
-    
--   **Built-in Transitions:** Smooth, hardcoded `fadeIn` animations for every page change—no extra CSS required.
-    
--   **Dynamic "Instance" Routing:** Navigating to `/user/1` and `/user/2` creates two distinct, persistent sections.
-
--   **Supports URL Variables:** Turns `/hello/:name` into `%{ name }%` [example](https://template-switch.netlify.app/hello/YourName)
-    
--   **Zero Dependencies:** No React, no Vue, no build tools. Just standard Web Components.
-
--   **Plays Well With Small Frameworks:** Small Frameworks like PetiteVue and AlpineJS love this switch [todo-example](https://template-switch.netlify.app/todo-petite)
-
-
-
-----------
-
-## 🛠️ Usage
-
-### 1. Define the Layout
-
-Use the `ts-layout` ID. Use `%{ title }%` for the page title and `%{ content }%` where the routes should appear.
-
-### 2. Define the Routes
-
-Use the `ts-routes` ID. Use `%{ param }%` to inject URL variables directly into your HTML and Scripts.
+Define your navigation and your route templates inside a main container.
 
 ```html
-<template-switch>
-  <template id="ts-layout">
-    <header>
-      <nav>
-        <a href="/">Home</a>
-        <a href="/counter/1">Counter 1</a>
-        <a href="/counter/42">Counter 42</a>
-      </nav>
-      <h1>%{ title }%</h1>
-    </header>
-    <main>%{ content }%</main>
+<nav x-data>
+  <a href="/">Home</a>
+  <a href="/about">About</a>
+  <a href="/user/john">Profile</a>
+</nav>
+
+<h1 x-data x-text="$store.router.title"></h1>
+
+<main>
+  <template x-route="/" x-title="Home Page">
+    <section id="home">
+      <h2>Welcome Home</h2>
+      <p>This is the default view.</p>
+    </section>
   </template>
 
-  <template id="ts-routes">
-    <template path="/" title="Welcome">
-      <p>Home page, loaded instantly.</p>
-    </template>
-
-    <template path="/counter/:start" title="Counter">
-      <article>
-        <p>Count: <strong id="val-%{start}%">%{start}%</strong></p>
-        <button id="inc-%{start}%">Increment</button>
-      </article>
-
-      <script>
-        (() => {
-          // Variables are hardcoded into the script on instantiation!
-          let count = parseInt("%{start}%");
-          const btn = document.getElementById('inc-%{start}%');
-          const display = document.getElementById('val-%{start}%');
-          
-          btn.onclick = () => display.textContent = ++count;
-        })();
-      </script>
-    </template>
+  <template x-route="/user/:name" x-title="User Profile" transition.duration.1000ms>
+    <section id="profile">
+      <h2>User Profile</h2>
+      <p>Hello, <span x-text="name"></span>!</p>
+    </section>
   </template>
-</template-switch>
+
+  <template x-route="*"><!-- optinal customized 404 -->
+    <section>
+      <h2>404 - Not Found</h2>
+      <a href="/">Back to Safety</a>
+    </section>
+  </template>
+</main>
 
 ```
 
-----------
-
-## 🧠 How it Works: The "Instance Stack"
-
-Unlike traditional routers that wipe the page clean, **Template Switch** manages a stack of unique instances:
-
-1.  **The Blueprint:** It stores your `<template>` tags as blueprints.
-    
-2.  **The Instance:** When you visit `/user/alice`, it clones the blueprint, interpolates the data (`%{name}%` → `alice`), and appends it to the DOM.
-    
-3.  **The Toggle:** When you visit `/user/bob`, it hides "alice" and creates a new "bob" instance.
-    
-4.  **The Memory:** If you go back to `/user/alice`, the router simply unhides the original instance. Any changes you made (like typing in an input) are still there.
-    
+[Other Live Example](https://alpine-switch.netlify.app)
 
 ----------
 
-## 💡 Advanced Advice
+## 🛠 API Reference
 
-### Avoiding ID Collisions
+### Directives
 
-Since multiple instances (like `/counter/1` and `/counter/2`) live in the DOM simultaneously, `document.getElementById('btn')` will always find the **first** one created.
+Directive
 
-**Solution:** Use the `%{param}%` syntax to give your IDs unique names, as shown in the usage example: `id="btn-%{start}%"`
+Description
 
-### Scoped Scripting
+Example
 
-Always wrap your scripts in an **IIFE** (Immediately Invoked Function Expression). This prevents variables from leaking into the global scope and clashing with other routes.
+`x-route`
 
-```javascript
-<script>
-  (() => {
-    const localData = "Safe and sound";
-  })();
-</script>
+Defines the path pattern to match. Use `:` for parameters.
 
-```
+`x-route="/post/:id"`
 
+Makes the parameter `id` available as a variable.
+
+`x-title`
+
+(Optional) Sets the `document.title` and `$store.router.title` when active.
+
+`x-title="Settings"`
+
+Sets the variable `$store.router.title` and the title of the page.
+
+### Global Store (`$store.router`)
+
+The router state is globally accessible via Alpine's store.
+
+-   **`$store.router.path`**: The current URL pathname.
+    
+-   **`$store.router.params`**: An object containing current route parameters (e.g., `{ name: 'john' }`).
+    
+-   **`$store.router.title`**: The title of the current active route.
+    
+-   **`$store.router.go(path)`**: Programmatically navigate to a new path.
+    
 ----------
 
 ## 🚀 Deployment
@@ -141,8 +130,7 @@ location / {
 ```
 
 ### Example for Netlify:
-Simply include a file in the root of your repository, named:
-netlify.toml
+Simply include a file in the root of your repository, named: `netlify.toml`
 ```
 [[redirects]]
   from = "/*"
@@ -153,8 +141,48 @@ netlify.toml
 
 ----------
 
-## 📜 License
+## 🧪 Testing
 
-MIT © [rodezee](https://github.com/rodezee/template-switch)
+This project is tested using **Vitest** and **JSDOM**. Because Alpine.js initializes asynchronously, the test suite ensures that routes are correctly registered and cleared.
 
-# alpine-switch
+To run the tests:
+
+Bash
+
+```
+npm install
+npm test
+
+```
+
+### Example Test Case
+
+Our suite covers:
+
+-   Initial render of the Home route.
+    
+-   Navigation to parameterized routes (extracting `:name`).
+    
+-   DOM cleanup (ensuring the old route is removed).
+    
+-   404 fallback logic.
+    
+
+----------
+
+## 💡 Why "Switch"?
+
+Traditional routers often hide and show elements using `display: none`. **Alpine Switch Router** physically removes the previous route from the DOM before mounting the new one. This ensures:
+
+1.  **No ID Collisions:** Two pages can't have the same `#id` at the same time.
+    
+2.  **Clean State:** Alpine components on the previous page are fully destroyed, firing their `x-cleanup` hooks.
+    
+3.  **Performance:** The browser only has to style and paint the content you are actually looking at.
+
+----------
+
+## ⚖️ License
+
+MIT © [biensurerodezee@protonmail.com]
+

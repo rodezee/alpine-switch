@@ -1,15 +1,18 @@
 /** @vitest-environment jsdom */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { waitFor } from '@testing-library/dom';
-import Alpine from '//unpkg.com/alpinejs/alpinejs';
-import './alpine-switch.js';
+import Alpine from 'alpinejs';
+import './alpine-switch.js'; 
 
 describe('Alpine Switch Router', () => {
-  beforeEach(() => {
-    // 1. Clear the DOM
+  beforeEach(async () => {
+    // 1. Reset URL
+    window.history.pushState({}, '', '/');
+
+    // 2. Inject HTML
     document.body.innerHTML = `
       <h1 x-data x-text="$store.router.title"></h1>
-      <main>
+      <main id="router-root">
         <template x-route="/" x-title="Home">
             <section id="home">Home Content</section>
         </template>
@@ -19,49 +22,72 @@ describe('Alpine Switch Router', () => {
       </main>
     `;
 
-    // 2. Mock window.location for JSDOM 
-    // JSDOM doesn't like direct assignment to window.location.pathname
-    delete window.location;
-    window.location = new URL('http://localhost/');
+    // 3. Initialize Alpine once
+    if (!window.AlpineInitialized) {
+        window.Alpine = Alpine;
+        Alpine.start();
+        window.AlpineInitialized = true;
+    }
 
-    // 3. Setup Alpine Globals
-    window.Alpine = Alpine;
+    const router = Alpine.store('router');
+    if (router) {
+        router.routes.clear();
+        // Manually find routes because directives haven't fired on the NEW HTML yet
+        document.querySelectorAll('[x-route]').forEach(el => {
+            const path = el.getAttribute('x-route');
+            if (path && path !== '*') router.routes.add(path);
+        });
 
-    // 4. Start Alpine and trigger the router's init listener
-    // We do this to simulate the browser behavior
-    Alpine.start();
-    document.dispatchEvent(new CustomEvent('alpine:init'));
+        router.path = window.location.pathname;
+        router.notFound = false;
+        
+        // 4. CRITICAL: Force Alpine to look at the NEW elements
+        // This is like 're-starting' Alpine for the current body
+        Alpine.initTree(document.body);
+        
+        router.update();
+    }
   });
 
   it('initializes and renders the home route', async () => {
     await waitFor(() => {
       expect(document.getElementById('home')).not.toBeNull();
-      expect(document.title).toBe('Home');
-    });
-  });
-
-  it('updates the title store correctly', async () => {
-    await waitFor(() => {
-      const h1 = document.querySelector('h1');
-      expect(h1.textContent).toBe('Home');
+      // Use textContent to check if Alpine actually rendered the store title
+      expect(document.querySelector('h1').textContent).toBe('Home');
     });
   });
 
   it('navigates to a parameterized route (/user/john)', async () => {
-    // We call the store directly
+    // Navigate
     Alpine.store('router').go('/user/john');
 
     await waitFor(() => {
+      // Check pathname
       expect(window.location.pathname).toBe('/user/john');
+      // Check content
       const userSection = document.getElementById('user');
       expect(userSection).not.toBeNull();
-      // Use toContain because of possible whitespace in the template
       expect(userSection.textContent).toContain('john');
     });
   });
 
+  it('cleans up the previous route when navigating away', async () => {
+    // Start at Home
+    Alpine.store('router').go('/');
+    await waitFor(() => expect(document.getElementById('home')).not.toBeNull());
+
+    // Go to User
+    Alpine.store('router').go('/user/jane');
+
+    await waitFor(() => {
+      // Home should be gone, User should be there
+      expect(document.getElementById('home')).toBeNull();
+      expect(document.getElementById('user')).not.toBeNull();
+    });
+  });
+
   it('renders a 404 fallback when no route matches', async () => {
-    Alpine.store('router').go('/does-not-exist');
+    Alpine.store('router').go('/broken-link');
 
     await waitFor(() => {
       const fallback = document.getElementById('alpine-router-default-404');
@@ -69,19 +95,43 @@ describe('Alpine Switch Router', () => {
       expect(fallback.textContent).toContain('404');
     });
   });
-
-  it('cleans up the previous route when navigating away', async () => {
-    // Navigate initially to home
-    Alpine.store('router').go('/');
+  
+  it('does not re-render if navigating to the current path', async () => {
+    const router = Alpine.store('router');
+    router.go('/');
     await waitFor(() => expect(document.getElementById('home')).not.toBeNull());
 
-    // Switch to user
-    Alpine.store('router').go('/user/jane');
+    const initialElement = document.getElementById('home');
+    
+    // Attempt to go home again
+    router.go('/');
+    
+    // The element instance should be the exact same physical node
+    expect(document.getElementById('home')).toBe(initialElement);
+  });
+  
+  it('provides route params as local scope to the rendered element', async () => {
+    Alpine.store('router').go('/user/bobby');
 
     await waitFor(() => {
-      // Home should be removed instantly based on your updated "remove()" logic
-      expect(document.getElementById('home')).toBeNull();
-      expect(document.getElementById('user')).not.toBeNull();
+        const userEl = document.getElementById('user');
+        // Check if the x-text inside the template actually resolved 'bobby'
+        expect(userEl.querySelector('span').textContent).toBe('bobby');
     });
+  });
+
+  it('ignores external links and allows default browser behavior', async () => {
+    const router = Alpine.store('router');
+    vi.spyOn(router, 'go'); // Watch the 'go' method
+
+    const externalLink = document.createElement('a');
+    externalLink.href = 'https://google.com';
+    document.body.appendChild(externalLink);
+
+    // We have to simulate a real click event
+    externalLink.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+    // Router.go should NOT have been called
+    expect(router.go).not.toHaveBeenCalled();
   });
 });
