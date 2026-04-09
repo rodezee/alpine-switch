@@ -7,48 +7,47 @@
     <script src="//unpkg.com/alpinejs" defer></script>
     <link rel="stylesheet" href="//unpkg.com/@picocss/pico">
 </head>
-<body class="container" x-data>
+<body class="container" x-data="{}">
 
-  <header>
-    <nav>
-        <ul>
-            <li><a x-link href="/">Home</a></li>
-            <li><a x-link href="/user/john">John</a></li>
-            <li><a x-link href="/user/jane">Jane</a></li>
-            <li><a x-link href="/about">About</a></li>
-        </ul>
-    </nav>
-  </header>
-  <main>
-      <template x-route="/">
-          <section>
-              <h1>Welcome Home</h1>
-              <p>Click the links above to test the router.</p>
-          </section>
-      </template>
+    <header>
+        <h1 x-text="$store.router.title"></h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/user/john">John</a></li>
+                <li><a href="/user/jane">Jane</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/broken-link">404 Test</a></li>
+            </ul>
+        </nav>
+    </header>
 
-      <template x-route="/user/:name">
-          <section>
-              <h1>Profile</h1>
-              <p>User: <strong x-text="name"></strong></p>
-          </section>
-      </template>
+    <main>
+        <template x-route="/" x-title="Welcome Home">
+            <section>
+                <p>The title above updated automatically!</p>
+            </section>
+        </template>
 
-      <template x-route="/about">
-          <section>
-              <h1>About Us</h1>
-              <p>This is a custom Alpine.js router plugin.</p>
-          </section>
-      </template>
-      
-      <template x-route="*">
-          <section>
-              <h1>404</h1>
-              <p>Page not found!</p>
-          </section>
-      </template>
+        <template x-route="/user/:name" x-title="User Profile">
+            <section>
+                <p>You are viewing: <strong x-text="name"></strong></p>
+            </section>
+        </template>
 
-  </main>
+        <template x-route="/about" x-title="About Us">
+            <section>
+                <p>This router now handles everything globally.</p>
+            </section>
+        </template>
+
+        <template x-route="*" x-title="404 - Not Found">
+            <section>
+                <p>Sorry, that page doesn't exist.</p>
+                <a href="/">Back to Safety</a>
+            </section>
+        </template>
+    </main>
 
 </body>
 </html>
