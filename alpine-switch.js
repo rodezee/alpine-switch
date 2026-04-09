@@ -1,68 +1,44 @@
 document.addEventListener('alpine:init', () => {
-    // 1. The Central Store
     Alpine.store('router', {
         path: window.location.pathname,
         title: '',
         routes: new Set(),
         notFound: false,
-
         init() {
             window.addEventListener('popstate', () => this.update());
-            // Small delay to ensure all x-route templates are registered
             setTimeout(() => this.update(), 0);
         },
-
         go(path) {
             if (this.path !== path) {
                 history.pushState(null, '', path);
                 this.update();
             }
         },
-
         update() {
             this.path = window.location.pathname;
-            
-            // 1. Check if the current path matches any registered route
             const hasMatch = Array.from(this.routes).some(route => {
                 const regex = new RegExp(`^${route.replace(/:(\w+)/g, '(?<$1>[^/]+)')}$`);
                 return this.path.match(regex);
             });
-
             this.notFound = !hasMatch;
-
-            // 2. Handle the "Default" 404 (if no <template x-route="*"> exists)
             this.handleDefault404();
         },
-
         handleDefault404() {
             const custom404Template = document.querySelector('[x-route="*"]');
             let fallbackEl = document.getElementById('alpine-router-default-404');
-
             if (this.notFound && !custom404Template) {
-                // If we need a 404 but the user didn't make a template, inject one
                 if (!fallbackEl) {
                     fallbackEl = document.createElement('section');
                     fallbackEl.id = 'alpine-router-default-404';
-                    fallbackEl.innerHTML = `
-                        <div style="text-align: center; padding: 2rem;">
-                            <h1>404</h1>
-                            <p>Oops! This page doesn't exist.</p>
-                            <a href="/">Return Home</a>
-                        </div>
-                    `;
+                    fallbackEl.innerHTML = `<div style="text-align: center; padding: 2rem;"><h1>404</h1><p>Oops! Page not found.</p><a href="/">Return Home</a></div>`;
                     const container = document.querySelector('main') || document.body;
                     container.appendChild(fallbackEl);
                 }
                 this.title = "Page Not Found";
-                document.title = "404 - Not Found";
-            } else if (fallbackEl) {
-                // Remove the default 404 if we are back on a valid route
-                fallbackEl.remove();
-            }
+            } else if (fallbackEl) { fallbackEl.remove(); }
         }
     });
 
-    // 2. Automatic Link Interceptor
     window.addEventListener('click', (e) => {
         const link = e.target.closest('a');
         if (!link || !link.getAttribute('href')?.startsWith('/') || link.target === '_blank') return;
@@ -70,14 +46,12 @@ document.addEventListener('alpine:init', () => {
         Alpine.store('router').go(link.getAttribute('href'));
     });
 
-    // 3. The x-route Directive
     Alpine.directive('route', (el, {}, { effect, cleanup }) => {
         const pathPattern = el.getAttribute('x-route');
         const routeTitle = el.getAttribute('x-title') || "";
+        const hasTransition = el.hasAttribute('x-transition');
         
-        if (pathPattern !== '*') {
-            Alpine.store('router').routes.add(pathPattern);
-        }
+        if (pathPattern !== '*') Alpine.store('router').routes.add(pathPattern);
 
         let renderedElement = null;
 
@@ -102,23 +76,53 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
+                // 1. Clone the template
                 const clone = el.content.firstElementChild.cloneNode(true);
                 renderedElement = clone;
-                renderedElement._x_route_data = Alpine.reactive(match.groups || {});
+
+                // 2. Prepare reactive data + visibility state
+                renderedElement._x_route_data = Alpine.reactive({ 
+                    ...match.groups,
+                    _shown: !hasTransition // If no transition, show immediately
+                });
+
+                // 3. If transitioning, bind x-show to our internal _shown variable
+                if (hasTransition) {
+                    renderedElement.setAttribute('x-show', '_shown');
+                    // Copy transition settings from template to the clone
+                    if (el.getAttribute('x-transition') === '') {
+                        renderedElement.setAttribute('x-transition', '');
+                    }
+                }
+
                 Alpine.addScopeToNode(renderedElement, renderedElement._x_route_data);
                 el.after(renderedElement);
                 Alpine.initTree(renderedElement);
+
+                // 4. Trigger the entrance transition
+                if (hasTransition) {
+                    requestAnimationFrame(() => {
+                        renderedElement._x_route_data._shown = true;
+                    });
+                }
             } else {
                 if (renderedElement) {
-                    renderedElement.remove();
-                    renderedElement = null;
+                    if (hasTransition) {
+                        const elToRemove = renderedElement;
+                        renderedElement = null; 
+                        // Trigger exit transition
+                        elToRemove._x_route_data._shown = false;
+                        // Wait for transition to finish before removal
+                        // 400ms is a safe default for Alpine transitions
+                        setTimeout(() => elToRemove.remove(), 400);
+                    } else {
+                        renderedElement.remove();
+                        renderedElement = null;
+                    }
                 }
             }
         });
 
-        cleanup(() => {
-            if (renderedElement) renderedElement.remove();
-            Alpine.store('router').routes.delete(pathPattern);
-        });
+        cleanup(() => renderedElement && renderedElement.remove());
     });
 });

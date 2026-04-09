@@ -33,13 +33,13 @@
     </header>
 
     <main class="container">
-        <template x-route="/" x-title="Welcome Home" x-transistion>
+        <template x-route="/" x-title="Welcome Home" x-transition>
             <section>
                 <p>The title above updated automatically!</p>
             </section>
         </template>
 
-        <template x-route="/weather" x-title="Live Weather" x-transistion>
+        <template x-route="/weather" x-title="Live Weather" x-transition>
             <article x-data="{
                 city: '',
                 weather: null,
@@ -118,13 +118,13 @@
             </article>
         </template>
 
-        <template x-route="/user/:name" x-title="User Profile" x-transistion>
+        <template x-route="/user/:name" x-title="User Profile" x-transition>
             <section>
                 <p>You are viewing: <strong x-text="name"></strong></p>
             </section>
         </template>
 
-        <template x-route="/about" x-title="About Us" x-transistion>
+        <template x-route="/about" x-title="About Us" x-transition>
             <section>
                 <p>This router now handles everything globally.</p>
             </section>
