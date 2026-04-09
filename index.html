@@ -1,35 +1,54 @@
 <!doctype html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <title>Alpine Switch</title>
     <script src="/alpine-switch.js"></script>
     <script src="//unpkg.com/alpinejs" defer></script>
     <link rel="stylesheet" href="//unpkg.com/@picocss/pico">
 </head>
-<body class="container">
+<body class="container" x-data>
 
+  <header>
     <nav>
         <ul>
             <li><a x-link href="/">Home</a></li>
             <li><a x-link href="/user/john">John</a></li>
             <li><a x-link href="/user/jane">Jane</a></li>
+            <li><a x-link href="/about">About</a></li>
         </ul>
     </nav>
+  </header>
+  <main>
+      <template x-route="/">
+          <section>
+              <h1>Welcome Home</h1>
+              <p>Click the links above to test the router.</p>
+          </section>
+      </template>
 
-    <main>
-        <template x-route="/">
-            <section>
-                <h1>Welcome Home</h1>
-            </section>
-        </template>
+      <template x-route="/user/:name">
+          <section>
+              <h1>Profile</h1>
+              <p>User: <strong x-text="name"></strong></p>
+          </section>
+      </template>
 
-        <template x-route="/user/:name">
-            <section>
-                <h1>Profile of: <span x-text="name"></span></h1>
-                <p>Hello, <span x-text="name"></span>! This is clean.</p>
-            </section>
-        </template>
+      <template x-route="/about">
+          <section>
+              <h1>About Us</h1>
+              <p>This is a custom Alpine.js router plugin.</p>
+          </section>
+      </template>
+      
+      <template x-route="*">
+          <section>
+              <h1>404</h1>
+              <p>Page not found!</p>
+          </section>
+      </template>
 
-        </main>
+  </main>
 
 </body>
 </html>

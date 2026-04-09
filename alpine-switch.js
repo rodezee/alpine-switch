@@ -1,9 +1,7 @@
-// alpine-switch.js
 document.addEventListener('alpine:init', () => {
     // 1. The Central Store
     Alpine.store('router', {
         path: window.location.pathname,
-        params: {},
         init() {
             window.addEventListener('popstate', () => {
                 this.path = window.location.pathname;
@@ -20,41 +18,52 @@ document.addEventListener('alpine:init', () => {
     // 2. The x-link directive
     Alpine.directive('link', (el) => {
         el.addEventListener('click', (e) => {
-            e.preventDefault();
-            Alpine.store('router').go(el.getAttribute('href'));
+            const href = el.getAttribute('href');
+            if (href && href.startsWith('/')) {
+                e.preventDefault();
+                Alpine.store('router').go(href);
+            }
         });
     });
 
-    // 3. The magic x-route directive
-    Alpine.directive('route', (el, { expression }, { effect, cleanup }) => {
-        const pathPattern = expression.replace(/['"]/g, '');
+    // 3. The x-route directive
+    Alpine.directive('route', (el, {}, { effect, cleanup }) => {
+        const pathPattern = el.getAttribute('x-route');
         let renderedElement = null;
 
-        // Effect runs whenever $store.router.path changes
         effect(() => {
             const currentPath = Alpine.store('router').path;
             
-            // Generate Regex from pattern (e.g., /user/:name)
-            const regex = new RegExp(`^${pathPattern.replace(/:(\w+)/g, '(?<$1>[^/]+)')}$`);
+            // Regex logic
+            const isCatchAll = pathPattern === '*';
+            const regexPattern = isCatchAll ? '.*' : pathPattern.replace(/:(\w+)/g, '(?<$1>[^/]+)');
+            const regex = new RegExp(`^${regexPattern}$`);
             const match = currentPath.match(regex);
 
             if (match) {
-                if (!renderedElement) {
-                    // Create the content from the template
-                    renderedElement = el.content.firstElementChild.cloneNode(true);
-                    
-                    // Inject the params into a fresh x-data scope automatically
-                    // This is why x-text="name" will work instantly
-                    Alpine.addScopeToNode(renderedElement, match.groups || {});
-                    
-                    el.after(renderedElement);
-                    Alpine.initTree(renderedElement);
-                } else {
-                    // If already rendered, just update the injected params
-                    Object.assign(Alpine.mergeProxies(Alpine.getClosestScope(renderedElement)), match.groups || {});
+                const groups = match.groups || {};
+
+                if (renderedElement) {
+                    // Update the existing reactive data
+                    // This triggers the x-text updates in the UI
+                    Object.assign(renderedElement._x_route_data, groups);
+                    return;
                 }
+
+                // First time rendering this route
+                const clone = el.content.firstElementChild.cloneNode(true);
+                renderedElement = clone;
+
+                // IMPORTANT: Create a reactive proxy for the route parameters
+                renderedElement._x_route_data = Alpine.reactive(groups);
+
+                // Add this reactive scope to the node
+                Alpine.addScopeToNode(renderedElement, renderedElement._x_route_data);
+                
+                el.after(renderedElement);
+                Alpine.initTree(renderedElement);
             } else {
-                // If the path no longer matches, remove it
+                // Not a match, remove the element
                 if (renderedElement) {
                     renderedElement.remove();
                     renderedElement = null;
