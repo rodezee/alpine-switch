@@ -49,7 +49,12 @@ document.addEventListener('alpine:init', () => {
     Alpine.directive('route', (el, {}, { effect, cleanup }) => {
         const pathPattern = el.getAttribute('x-route');
         const routeTitle = el.getAttribute('x-title') || "";
-        const hasTransition = el.hasAttribute('x-transition');
+        
+        // Find if any x-transition attributes exist on the template
+        const transitionAttrs = Array.from(el.attributes)
+            .filter(attr => attr.name.startsWith('x-transition'));
+        
+        const hasTransition = transitionAttrs.length > 0;
         
         if (pathPattern !== '*') Alpine.store('router').routes.add(pathPattern);
 
@@ -76,30 +81,29 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                // 1. Clone the template
                 const clone = el.content.firstElementChild.cloneNode(true);
                 renderedElement = clone;
 
-                // 2. Prepare reactive data + visibility state
                 renderedElement._x_route_data = Alpine.reactive({ 
                     ...match.groups,
-                    _shown: !hasTransition // If no transition, show immediately
+                    _shown: !hasTransition 
                 });
 
-                // 3. If transitioning, bind x-show to our internal _shown variable
+                // --- TRANSITION LOGIC ---
                 if (hasTransition) {
+                    // Apply x-show linked to our internal toggle
                     renderedElement.setAttribute('x-show', '_shown');
-                    // Copy transition settings from template to the clone
-                    if (el.getAttribute('x-transition') === '') {
-                        renderedElement.setAttribute('x-transition', '');
-                    }
+                    
+                    // Copy all transition modifiers (duration, opacity, etc.)
+                    transitionAttrs.forEach(attr => {
+                        renderedElement.setAttribute(attr.name, attr.value);
+                    });
                 }
 
                 Alpine.addScopeToNode(renderedElement, renderedElement._x_route_data);
                 el.after(renderedElement);
                 Alpine.initTree(renderedElement);
 
-                // 4. Trigger the entrance transition
                 if (hasTransition) {
                     requestAnimationFrame(() => {
                         renderedElement._x_route_data._shown = true;
@@ -107,18 +111,9 @@ document.addEventListener('alpine:init', () => {
                 }
             } else {
                 if (renderedElement) {
-                    if (hasTransition) {
-                        const elToRemove = renderedElement;
-                        renderedElement = null; 
-                        // Trigger exit transition
-                        elToRemove._x_route_data._shown = false;
-                        // Wait for transition to finish before removal
-                        // 400ms is a safe default for Alpine transitions
-                        setTimeout(() => elToRemove.remove(), 400);
-                    } else {
-                        renderedElement.remove();
-                        renderedElement = null;
-                    }
+                    // Kill it immediately. No waiting, no "leaving" transition.
+                    renderedElement.remove();
+                    renderedElement = null;
                 }
             }
         });

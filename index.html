@@ -10,16 +10,10 @@
 <body class="container" x-data="{}">
 
     <header>
-        <div x-data="{ open: false }">
-            <button @click="open = ! open">Toggle</button>
-         
-            <div x-show="open" x-transition>
-                Hello 👋
-            </div>
-        </div>
-    
-        <h1 x-text="$store.router.title"></h1>
-
+        <h1 x-data="{ show: true }" 
+            x-show="show" x-effect="if($store.router.title) show = false; setTimeout(() => { show = true }, 500);"
+            x-text="$store.router.title"
+            x-transition.enter.duration.500ms></h1>
         <nav>
             <ul>
                 <li><a href="/">Home</a></li>
@@ -33,13 +27,13 @@
     </header>
 
     <main class="container">
-        <template x-route="/" x-title="Welcome Home" x-transition>
+        <template x-route="/" x-title="Welcome Home" x-transition.duration.1000ms>
             <section>
                 <p>The title above updated automatically!</p>
             </section>
         </template>
 
-        <template x-route="/weather" x-title="Live Weather" x-transition>
+        <template x-route="/weather" x-title="Live Weather" x-transition.opacity.duration.1000ms>
             <article x-data="{
                 city: '',
                 weather: null,
@@ -118,7 +112,7 @@
             </article>
         </template>
 
-        <template x-route="/user/:name" x-title="User Profile" x-transition>
+        <template x-route="/user/:name" x-title="User Profile" x-transition.scale.50.duration.1500ms>
             <section>
                 <p>You are viewing: <strong x-text="name"></strong></p>
             </section>
