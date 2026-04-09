@@ -10,10 +10,20 @@
 <body class="container" x-data="{}">
 
     <header>
+        <div x-data="{ open: false }">
+            <button @click="open = ! open">Toggle</button>
+         
+            <div x-show="open" x-transition>
+                Hello 👋
+            </div>
+        </div>
+    
         <h1 x-text="$store.router.title"></h1>
+
         <nav>
             <ul>
                 <li><a href="/">Home</a></li>
+                <li><a href="/weather">Weather</a></li>
                 <li><a href="/user/john">John</a></li>
                 <li><a href="/user/jane">Jane</a></li>
                 <li><a href="/about">About</a></li>
@@ -22,32 +32,110 @@
         </nav>
     </header>
 
-    <main>
-        <template x-route="/" x-title="Welcome Home">
+    <main class="container">
+        <template x-route="/" x-title="Welcome Home" x-transistion>
             <section>
                 <p>The title above updated automatically!</p>
             </section>
         </template>
 
-        <template x-route="/user/:name" x-title="User Profile">
+        <template x-route="/weather" x-title="Live Weather" x-transistion>
+            <article x-data="{
+                city: '',
+                weather: null,
+                loading: false,
+                error: null,
+
+                async getWeather() {
+                    if (!this.city) return;
+                    this.loading = true;
+                    this.error = null;
+
+                    try {
+                        // 1. Get Coordinates (Lat/Long)
+                        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(this.city)}&count=1`);
+                        const geoData = await geoRes.json();
+
+                        if (!geoData.results) throw new Error('City not found');
+                        const { latitude, longitude, name } = geoData.results[0];
+
+                        // 2. Get Weather
+                        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+                        const weatherData = await weatherRes.json();
+
+                        this.weather = {
+                            name: name,
+                            temp: weatherData.current_weather.temperature,
+                            wind: weatherData.current_weather.windspeed,
+                            description: this.interpretCode(weatherData.current_weather.weathercode)
+                        };
+                    } catch (err) {
+                        this.error = err.message;
+                        this.weather = null;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                interpretCode(code) {
+                    const codes = { 0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast', 45: 'Fog', 61: 'Slight rain' };
+                    return codes[code] || 'Variable conditions';
+                }
+            }">
+                <header>
+                    <h3>Weather Search</h3>
+                    <div class="grid">
+                        <input type="text" 
+                               x-model="city" 
+                               @keyup.enter="getWeather()" 
+                               placeholder="Enter City (e.g. London)">
+                        <button x-bind:aria-busy="loading" @click="getWeather()">Search</button>
+                    </div>
+                </header>
+
+                <div x-show="loading" aria-busy="true">Fetching weather data...</div>
+
+                <template x-if="weather && !loading">
+                    <div>
+                        <hgroup>
+                            <h2 x-text="weather.temp + '°C'"></h2>
+                            <p x-text="'In ' + weather.name"></p>
+                        </hgroup>
+                        
+                        <div class="grid">
+                            <div>
+                                <small>Wind Speed</small>
+                                <p><strong x-text="weather.wind + ' km/h'"></strong></p>
+                            </div>
+                            <div>
+                                <small>Condition</small>
+                                <p><strong x-text="weather.description"></strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                <p x-show="error" x-text="error" style="color: var(--pico-error-color);"></p>
+            </article>
+        </template>
+
+        <template x-route="/user/:name" x-title="User Profile" x-transistion>
             <section>
                 <p>You are viewing: <strong x-text="name"></strong></p>
             </section>
         </template>
 
-        <template x-route="/about" x-title="About Us">
+        <template x-route="/about" x-title="About Us" x-transistion>
             <section>
                 <p>This router now handles everything globally.</p>
             </section>
         </template>
-
-        <template x-route="*" x-title="404 - Not Found">
-            <section>
-                <p>Sorry, that page doesn't exist.</p>
-                <a href="/">Back to Safety</a>
-            </section>
-        </template>
     </main>
+
+    <footer class="container">
+      <strong>Powered by <a href="https://github.com/rodezee/alpine-switch">Alpine Switch</a></strong>
+      -
+      Styled with <a href="https://picocss.com">PicoCSS</a>
+    </footer>
 
 </body>
 </html>
